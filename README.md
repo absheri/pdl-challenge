@@ -2,7 +2,7 @@
 
 Welcome!
 
-In **data/**, you will find 10 compressed text files. Uncompressed, these 10 text files in aggregate contain 426,767 lines, where each line is a [JSON](https://www.json.org/)-[serialized](https://stackoverflow.com/questions/3316762/what-is-deserialize-and-serialize-in-json) object.
+In S3 (s3://open.peopledatalabs.com/data_software_challenge) you will find 10 compressed text files. Uncompressed, these 10 text files in aggregate contain 426,767 lines, where each line is a [JSON](https://www.json.org/)-[serialized](https://stackoverflow.com/questions/3316762/what-is-deserialize-and-serialize-in-json) object.
 
 Each object contains some attributes about a single person (ostensibly). There are many duplicates in the data (ie one person is *often* represented by more than one of these records).
 
