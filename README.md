@@ -4,7 +4,7 @@ Thank you for taking the time to complete this assignment. We believe this to be
 
 _Even though there is no strict time limit, it should take you ~4 hours to complete the assignment. Have fun!_
 
-The instructions are outlined in the `PDL Data Engineering Challenge.pdf`
+The instructions are outlined in the [PDL Data Engineering Challenge.pdf](.PDL Data Engineering Challenge.pdf)
 
                                                        - Yuan Zhao <yuan@peopledatalabs.com>
 
