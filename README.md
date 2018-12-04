@@ -19,4 +19,4 @@ Generally we prefer Python [3], but if you are more comfortable with C/C++/Java/
 Feel free to fork this repo and work from there, or just take the data and use your own fresh repo. If the raw data is included in your local file structure, it may make sense to add it to your *.gitignore*.  Please send a link to your resulting repo to *andrew@peopledatalabs.com*.
 
 ### Effort
-Feel free to spend as much time as you would like on this. We are looking for people who work hard *and* smart. This is a problem that one could easily dedicate one hour or one year - don't lose yourself in the details. 
+Feel free to spend as much time as you would like on this. We are looking for people who work hard *and* smart. This is a problem to which one could easily dedicate one hour or one year - don't lose yourself in the details. 
