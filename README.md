@@ -6,6 +6,6 @@ _Even though there is no strict time limit, it should take you ~4 hours to compl
 
 The instructions are outlined in the `PDL Data Engineering Challenge.pdf`
 
-Yuan Zhao <yuan@peopledatalabs.com>
+                                                                          - Yuan Zhao <yuan@peopledatalabs.com>
 
 
