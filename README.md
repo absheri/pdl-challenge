@@ -2,4 +2,6 @@
 
 Welcome!
 
-Please select the branch of the challenge that you are attempting or have been directed to. 
+Please select the circuit of the challenge that you are attempting or have been directed to. 
+
+* [Infrastructure](infra/README.md)
