@@ -1,4 +1,4 @@
-# PDL Challenge
+# Data Programming Challenge (Software, Analysis, etc.)
 
 Welcome!
 
