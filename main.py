@@ -1,9 +1,9 @@
 import recordlinkage
 import pandas as pd
+import numpy as np
 import json
 import glob
 from pandas.io.json import json_normalize
-from recordlinkage.index import Full
 
 flattening_key = {"phone_numbers": "number",
                   "names": "clean",
@@ -49,21 +49,21 @@ def print_file_stats(file_data):
 
 
 def read_file(file):
+    print("Reading file {}".format(file))
     file_data = []
     with open(file) as f:
         line_num = 0
         for line in f.readlines():
-
             # Process the data into something that will fit into a dataframe
             data = json.loads(line.strip())
             cleaned_data = {}
 
-            flatten(data, cleaned_data, 'phone_numbers')
-            flatten(data, cleaned_data, 'locations')
-            flatten(data, cleaned_data, 'emails')
+            # flatten(data, cleaned_data, 'phone_numbers')
+            # flatten(data, cleaned_data, 'locations')
+            # flatten(data, cleaned_data, 'emails')
+            # flatten(data, cleaned_data, 'education')
+            # flatten(data, cleaned_data, 'gender')
             flatten(data, cleaned_data, 'names')
-            flatten(data, cleaned_data, 'education')
-            flatten(data, cleaned_data, 'gender')
             flatten(data, cleaned_data, 'birth_date')
             # profiles = {}
             # for x in data['profiles']:
@@ -80,60 +80,82 @@ def read_file(file):
     return file_data
 
 
-def merge_data(df_a, df_b, indexes_in_b_to_drop):
-    df_dropped_b = df_b.drop(df_b.index[indexes_in_b_to_drop])
-    df_merged = df_a.append(df_dropped_b, ignore_index=True)
+def write_cleaned_data(file, matches_to_keep):
+    lines_to_keep = [int(x.replace(")", "").split(",")[1]) for x in matches_to_keep]
+    file_data = []
+    with open(file) as f:
+        line_num = 0
+        for line in f.readlines():
+            if line_num in lines_to_keep:
+                file_data.append(line)
+            line_num += 1
+
+    with open(file + "-cleaned", 'w') as f:
+        for item in file_data:
+            f.write(item)
+
+def merge_data(df_a, df_b, indexes_in_a_to_drop):
+    df_dropped_a = df_a.drop(df_a.index[indexes_in_a_to_drop])
+    df_merged = df_b.append(df_dropped_a, ignore_index=True)
 
     return df_merged
 
 
 files = glob.glob('./data/part-*')
-df_a = json_normalize(read_file(files[0]))
 
-# Keep a list of (file_name,lines) so that we can clean the data once we have found the duplicates.
-lines_to_be_dropped = []
+# Link records within each of the files and write out the cleaned data.
+for file in files:
+    file_data = read_file(file)
+    chunk_size = 100
+    chunked_file_data = [file_data[i:i + chunk_size] for i in range(0, len(file_data), chunk_size)]
 
-# Compare each of the files.
-for file in files[1:]:
-    df_b = json_normalize(read_file(file))
+    df_a = json_normalize(chunked_file_data[0])
+    for chunk in chunked_file_data[1:]:
+        # Print out the identifier for the fist element so that we know how far along we are.
+        print("Comparing {}".format(chunk[0]['identifier']))
+        df_b = json_normalize(chunk)
 
-    indexer = recordlinkage.Index()
+        indexer = recordlinkage.Index()
 
-    # Blocking on birth data because its a value that does not change over a persons life like name or address.
-    indexer.block('birth_date')
-    candidate_links = indexer.index(df_a, df_b)
+        # Blocking on birth data because its a value that does not change over a persons life like name or address.
+        indexer.block('birth_date')
+        # indexer.add(Full())
+        candidate_links = indexer.index(df_a, df_b)
 
-    compare = recordlinkage.Compare()
+        compare = recordlinkage.Compare()
 
-    # TODO: Look at attributes to compare. Drop what is not needed.
-    # TODO: Look at methods for comparing elements.
-    compare.string('names', 'names', method='damerau_levenshtein', threshold=0.85)
-    compare.string('phone_numbers', 'phone_numbers', method='damerau_levenshtein', threshold=0.85)
-    compare.string('emails', 'emails', method='damerau_levenshtein', threshold=0.85)
-    # Looks like there is a geographic comparer that could be used here if the locations are converted into WGS84 coordinate values.
-    compare.string('locations', 'locations', method='damerau_levenshtein', threshold=0.85)
-    compare.string('education', 'education', method='damerau_levenshtein', threshold=0.85)
-    compare.string('gender', 'gender', method='damerau_levenshtein', threshold=0.85)
-    compare.date('birth_date', 'birth_date')
+        compare.string('names', 'names', method='damerau_levenshtein', threshold=0.85)
+        # compare.string('phone_numbers', 'phone_numbers', method='damerau_levenshtein', threshold=0.85)
+        # compare.string('emails', 'emails', method='damerau_levenshtein', threshold=0.85)
+        # # Looks like there is a geographic comparer that could be used here if the locations are converted into WGS84 coordinate values.
+        # compare.string('locations', 'locations', method='damerau_levenshtein', threshold=0.85)
+        # compare.string('education', 'education', method='damerau_levenshtein', threshold=0.85)
+        # compare.string('gender', 'gender', method='damerau_levenshtein', threshold=0.85)
+        # compare.date('birth_date', 'birth_date')
 
-    # The comparison vectors
-    compare_vectors = compare.compute(candidate_links, df_a, df_b)
+        # The comparison vectors
+        compare_vectors = compare.compute(candidate_links, df_a, df_b)
 
-    # Classification step
-    matches = compare_vectors[compare_vectors.sum(axis=1) >= 1]
+        # Classification step
+        matches = compare_vectors[compare_vectors.sum(axis=1) >= 1]
+        print("Found {} matches".format(len(matches)))
 
-    # Use KMeansClassifier to pick matches
-    # km = recordlinkage.KMeansClassifier()
-    # matches = km.fit_predict(compare_vectors)
+        # Use KMeansClassifier to pick matches
+        # km = recordlinkage.KMeansClassifier()
+        # matches = km.fit_predict(compare_vectors)
 
-    indexes_in_b_to_drop = [y for (x, y) in matches.index.values]
+        matches_in_b = [y for (x, y) in matches.index.values]
+        matches_in_a = [x for (x, y) in matches.index.values]
 
-    # Keep a list of everything to drop for later.
-    lines_to_be_dropped.append(df_b.ix[indexes_in_b_to_drop]['identifier'].tolist())
+        # Merge the datasets so that we can compare to the next chunk.
+        df_a = merge_data(df_a, df_b, matches_in_a)
 
-    # Merge the datasets so that we can compare to the next file.
-    df_a = merge_data(df_a, df_b, indexes_in_b_to_drop)
+        print("There are {} elements after merging".format(df_a.shape[0]))
+        print()
 
-# Print out all the names that were unique
-print(df_a['names'].to_string())
-print(lines_to_be_dropped)
+    write_cleaned_data(file, df_a['identifier'].tolist())
+
+
+# Once we have cleaned all of the files we can compare each of the files.
+files = glob.glob('./data/part-*cleaned')
+#TODO: Merge all of the files together. There is likly too much data here to use the aggregation method like above. Comparing all combinations of files might work better.
