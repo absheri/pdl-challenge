@@ -27,7 +27,10 @@ def flatten(data, cleaned_data, key):
             flattened.append(element[flattening_key[key]])
     if len(flattened) > 0:
         #TODO: I am taking only the first element here because this needs to fit into a  dataframe. Need to figure out how to handel multiple attributes.
-        cleaned_data[key] = flattened[0]
+        try:
+            cleaned_data[key] = flattened[0].encode("ascii", errors="ignore").decode()
+        except:
+            pass
     else:
         cleaned_data[key] = ''
 
@@ -159,3 +162,47 @@ for file in files:
 # Once we have cleaned all of the files we can compare each of the files.
 files = glob.glob('./data/part-*cleaned')
 #TODO: Merge all of the files together. There is likly too much data here to use the aggregation method like above. Comparing all combinations of files might work better.
+
+df_a = json_normalize(read_file(files[0]))
+for file in files[1:]:
+
+    df_b = json_normalize(read_file(file))
+
+    indexer = recordlinkage.Index()
+
+    # Blocking on birth data because its a value that does not change over a persons life like name or address.
+    indexer.block('birth_date')
+    candidate_links = indexer.index(df_a, df_b)
+
+    compare = recordlinkage.Compare()
+
+    compare.string('names', 'names', method='damerau_levenshtein', threshold=0.85)
+    # compare.string('phone_numbers', 'phone_numbers', method='damerau_levenshtein', threshold=0.85)
+    # compare.string('emails', 'emails', method='damerau_levenshtein', threshold=0.85)
+    # # Looks like there is a geographic comparer that could be used here if the locations are converted into WGS84 coordinate values.
+    # compare.string('locations', 'locations', method='damerau_levenshtein', threshold=0.85)
+    # compare.string('education', 'education', method='damerau_levenshtein', threshold=0.85)
+    # compare.string('gender', 'gender', method='damerau_levenshtein', threshold=0.85)
+    # compare.string('birth_date', 'birth_date')
+
+    # The comparison vectors
+    compare_vectors = compare.compute(candidate_links, df_a, df_b)
+
+    # Classification step
+    matches = compare_vectors[compare_vectors.sum(axis=1) >= 1]
+    print("Found {} matches".format(len(matches)))
+
+    # Use KMeansClassifier to pick matches
+    # km = recordlinkage.KMeansClassifier()
+    # matches = km.fit_predict(compare_vectors)
+
+    matches_in_b = [y for (x, y) in matches.index.values]
+    matches_in_a = [x for (x, y) in matches.index.values]
+
+    # Merge the datasets so that we can compare to the next chunk.
+    df_a = merge_data(df_a, df_b, matches_in_a)
+
+    print("There are {} elements after merging".format(df_a.shape[0]))
+    print()
+
+write_cleaned_data("Final", df_a['identifier'].tolist())
